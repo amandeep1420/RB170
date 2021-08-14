@@ -19,28 +19,43 @@
 #   done
 # }
 
+#!/bin/bash
+
 function server () {
   while true
   do
-    read method path version
+    message_arr=()
+    check=true
+    while $check
+    do
+      read line
+      message_arr+=($line)
+      if [[ "${#line}" -eq 1 ]]
+      then
+        check=false
+      fi
+    done
+    method=${message_arr[0]}
+    path=${message_arr[1]}
     if [[ $method = 'GET' ]]
     then
       if [[ -f "./www/$path" ]]
       then
-        echo -ne 'HTTP/1.1 200 OK\r\n\r\n'; cat "./www/$path"
+        length=$(wc -c <./www/$path)
+        
+        echo -ne 'HTTP/1.1 200 OK\r\n'
+        echo -ne 'Content-Type: text/html; charset=utf-8\r\n'
+        echo -ne "Content-Length: $length\r\n\r\n"
+        cat "./www/$path"
       else
-        echo -ne 'HTTP/1.1 404 Not Found\r\n\r\n'
+        echo -ne 'HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n'
       fi
     else
-      echo -ne 'HTTP/1.1 400 Bad Request\r\n\r\n'
+      echo -ne 'HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n'
     fi
   done
 }
 
 coproc SERVER_PROCESS { server; }
 
-netcat -lv 2345 <&${SERVER_PROCESS[0]} >&${SERVER_PROCESS[1]}
-
-coproc SERVER_PROCESS { server; }
-
-nc -lv 2345 <&${SERVER_PROCESS[0]} >&${SERVER_PROCESS[1]}
+nc -klv 8080 <&${SERVER_PROCESS[0]} >&${SERVER_PROCESS[1]}
